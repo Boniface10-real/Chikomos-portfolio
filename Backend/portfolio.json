@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "title": "My First Website",
+    "description": "A simple HTML and CSS site",
+    "image_url": "",
+    "link": "https://my-student-website-g4sh.onrender.com",
+    "category": "Web"
+  },
+  {
+    "id": 2,
+    "title": "Student Portfolio App",
+    "description": "Full stack portfolio with CRUD",
+    "image_url": "",
+    "link": "",
+    "category": "Web"
+  }
+]
