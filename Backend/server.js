@@ -1,48 +1,53 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
-
+const db = require('./db');
+require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 10000;
-const DATA_FILE = path.join(__dirname, 'portfolio.json');
 
 app.use(cors());
 app.use(express.json());
 
-function readData() {
-  if (!fs.existsSync(DATA_FILE)) return [];
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-}
-function writeData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-}
-
 app.get('/api/portfolio', (req, res) => {
-  res.json(readData().reverse());
+  db.all("SELECT * FROM portfolio", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.get('/api/portfolio/:id', (req, res) => {
+  db.get("SELECT * FROM portfolio WHERE id = ?", [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    res.json(row);
+  });
 });
 
 app.post('/api/portfolio', (req, res) => {
-  const data = readData();
-  const newItem = { id: Date.now(), ...req.body };
-  data.push(newItem);
-  writeData(data);
-  res.json(newItem);
+  const { owner_name, title, description, image_url, link, category } = req.body;
+  db.run("INSERT INTO portfolio (owner_name, title, description, image_url, link, category) VALUES (?, ?, ?, ?, ?, ?) ",
+    [owner_name, title, description, image_url, link, category],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.status(201).json({ id: this.lastID });
+    });
 });
 
 app.put('/api/portfolio/:id', (req, res) => {
-  let data = readData();
-  data = data.map(p => p.id == req.params.id ? { ...p, ...req.body, id: p.id } : p);
-  writeData(data);
-  res.json({ updated: true });
+  const { owner_name, title, description, image_url, link, category } = req.body;
+  db.run("UPDATE portfolio SET owner_name=?, title=?, description=?, image_url=?, link=?, category=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+    [owner_name, title, description, image_url, link, category, req.params.id],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ updated: true });
+    });
 });
 
 app.delete('/api/portfolio/:id', (req, res) => {
-  let data = readData();
-  data = data.filter(p => p.id != req.params.id);
-  writeData(data);
-  res.json({ deleted: true });
+  db.run("DELETE FROM portfolio WHERE id = ?", [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ deleted: true });
+  });
 });
 
 app.listen(PORT, () => console.log(`Portfolio API running on ${PORT}`));
